@@ -1,0 +1,10 @@
+{
+  "stocks": [
+    "MARUTI.NS",
+    "DIXON.NS",
+    "APOLLOHOSP.NS",
+    "CUMMINSIND.NS"
+  ],
+  "timeframes": ["5m", "15m"],
+  "ema_period": 20
+}
