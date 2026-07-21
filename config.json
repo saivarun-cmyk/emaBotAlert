@@ -1,10 +1,10 @@
 {
-  "stocks": [
-    "MARUTI.NS",
-    "DIXON.NS",
-    "APOLLOHOSP.NS",
-    "CUMMINSIND.NS"
-  ],
-  "timeframes": ["5m", "15m"],
-  "ema_period": 20
+  "stocks": ["MARUTI.NS", "DIXON.NS", "APOLLOHOSP.NS", "CUMMINSIND.NS"],
+  "ema_period": 20,
+  "timeframes": {
+    "5m": { "alert_on_touch": false },
+    "15m": { "alert_on_touch": true }
+  },
+  "market_start": "09:15",
+  "market_end": "15:15"
 }

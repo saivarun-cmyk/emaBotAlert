@@ -2,9 +2,10 @@ name: EMA20 Alert
 
 on:
   schedule:
-    # every 5 min, 3:00-10:55 UTC (covers NSE 9:15-15:30 IST), Mon-Fri
-    - cron: '*/5 3-10 * * 1-5'
-  workflow_dispatch: {}   # lets you trigger it manually to test
+    - cron: '45-59/5 3 * * 1-5'   # 3:45, 3:50, 3:55 UTC → 9:15, 9:20, 9:25 AM IST
+    - cron: '*/5 4-9 * * 1-5'     # every 5 min from 4:00 to 9:55 UTC → 9:30 AM to 3:25 PM IST
+    - cron: '0 10 * * 1-5'        # 10:00 UTC → 3:30 PM IST (final candle)
+  workflow_dispatch: {}
 
 permissions:
   contents: write

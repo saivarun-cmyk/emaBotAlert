@@ -1,7 +1,6 @@
 import json
 import os
-import sys
-from datetime import datetime, timezone
+from datetime import datetime, time as dtime
 import pandas as pd
 import yfinance as yf
 import requests
@@ -12,7 +11,6 @@ STATE_PATH = "state.json"
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
-# yfinance needs enough history for a stable EMA20
 PERIOD_FOR_INTERVAL = {
     "5m": "5d",
     "15m": "1mo",
@@ -47,7 +45,18 @@ def compute_ema(df: pd.DataFrame, period: int) -> pd.DataFrame:
     return df
 
 
-def check_symbol(symbol: str, interval: str, ema_period: int, state: dict):
+def parse_hhmm(s: str) -> dtime:
+    h, m = map(int, s.split(":"))
+    return dtime(h, m)
+
+
+def is_within_market_hours(ts, start: dtime, end: dtime) -> bool:
+    t = ts.time()
+    return start <= t <= end
+
+
+def check_symbol(symbol: str, interval: str, ema_period: int, state: dict,
+                  alert_on_touch: bool, market_start: dtime, market_end: dtime):
     period = PERIOD_FOR_INTERVAL.get(interval, "5d")
     try:
         df = yf.download(symbol, period=period, interval=interval, progress=False)
@@ -59,29 +68,34 @@ def check_symbol(symbol: str, interval: str, ema_period: int, state: dict):
         print(f"Not enough data for {symbol} {interval}")
         return
 
-    # yfinance sometimes returns MultiIndex columns for a single ticker; flatten if so
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = df.columns.get_level_values(0)
 
     df = compute_ema(df, ema_period)
-
-    # Drop the last row: it's the still-forming candle, not a closed one
-    closed = df.iloc[:-1]
+    closed = df.iloc[:-1]  # drop the still-forming candle
 
     key = f"{symbol}_{interval}"
-    last_processed = state.get(key, {}).get("last_timestamp")
+    is_first_run = key not in state
 
-    # Only look at candles newer than the last one we already processed
-    new_candles = closed
-    if last_processed:
-        new_candles = closed[closed.index.astype(str) > last_processed]
+    if is_first_run:
+        if len(closed) > 0:
+            state[key] = {"last_timestamp": str(closed.index[-1])}
+        print(f"Bootstrapped {key}, no backlog alerts sent.")
+        return
+
+    last_processed = state[key]["last_timestamp"]
+    new_candles = closed[closed.index.astype(str) > last_processed]
 
     for ts, row in new_candles.iterrows():
         idx_pos = closed.index.get_loc(ts)
         if idx_pos == 0:
-            continue  # need a previous candle to detect a crossover
-        prev_row = closed.iloc[idx_pos - 1]
+            continue
 
+        # Skip anything outside market hours (pre-open/post-close candles)
+        if not is_within_market_hours(ts, market_start, market_end):
+            continue
+
+        prev_row = closed.iloc[idx_pos - 1]
         ema_val = row["EMA"]
         high, low, close = row["High"], row["Low"], row["Close"]
         prev_close, prev_ema = prev_row["Close"], prev_row["EMA"]
@@ -90,7 +104,9 @@ def check_symbol(symbol: str, interval: str, ema_period: int, state: dict):
         crossed_up = prev_close < prev_ema and close > ema_val
         crossed_down = prev_close > prev_ema and close < ema_val
 
-        if touched or crossed_up or crossed_down:
+        should_alert = crossed_up or crossed_down or (alert_on_touch and touched)
+
+        if should_alert:
             reason = []
             if crossed_up:
                 reason.append("crossed ABOVE EMA20")
@@ -113,12 +129,24 @@ def check_symbol(symbol: str, interval: str, ema_period: int, state: dict):
 
 
 def main():
-    config = load_json(CONFIG_PATH, {"stocks": [], "timeframes": ["5m", "15m"], "ema_period": 20})
+    default_cfg = {
+        "stocks": [],
+        "ema_period": 20,
+        "timeframes": {"5m": {"alert_on_touch": False}, "15m": {"alert_on_touch": True}},
+        "market_start": "09:15",
+        "market_end": "15:15",
+    }
+    config = load_json(CONFIG_PATH, default_cfg)
     state = load_json(STATE_PATH, {})
 
+    market_start = parse_hhmm(config.get("market_start", "09:15"))
+    market_end = parse_hhmm(config.get("market_end", "15:15"))
+    ema_period = config.get("ema_period", 20)
+
     for symbol in config["stocks"]:
-        for interval in config["timeframes"]:
-            check_symbol(symbol, interval, config.get("ema_period", 20), state)
+        for interval, tf_settings in config["timeframes"].items():
+            alert_on_touch = tf_settings.get("alert_on_touch", False)
+            check_symbol(symbol, interval, ema_period, state, alert_on_touch, market_start, market_end)
 
     save_json(STATE_PATH, state)
 
