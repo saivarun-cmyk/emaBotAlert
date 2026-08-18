@@ -1,26 +1,26 @@
 {
   "MARUTI.NS_5m": {
-    "last_timestamp": "2026-08-18 10:35:00+05:30"
+    "last_timestamp": "2026-08-18 10:45:00+05:30"
   },
   "MARUTI.NS_15m": {
-    "last_timestamp": "2026-08-18 10:15:00+05:30"
+    "last_timestamp": "2026-08-18 10:30:00+05:30"
   },
   "DIXON.NS_5m": {
-    "last_timestamp": "2026-08-18 10:35:00+05:30"
+    "last_timestamp": "2026-08-18 10:45:00+05:30"
   },
   "DIXON.NS_15m": {
-    "last_timestamp": "2026-08-18 10:15:00+05:30"
+    "last_timestamp": "2026-08-18 10:30:00+05:30"
   },
   "APOLLOHOSP.NS_5m": {
-    "last_timestamp": "2026-08-18 10:35:00+05:30"
+    "last_timestamp": "2026-08-18 10:45:00+05:30"
   },
   "APOLLOHOSP.NS_15m": {
-    "last_timestamp": "2026-08-18 10:15:00+05:30"
+    "last_timestamp": "2026-08-18 10:30:00+05:30"
   },
   "CUMMINSIND.NS_5m": {
-    "last_timestamp": "2026-08-18 10:35:00+05:30"
+    "last_timestamp": "2026-08-18 10:45:00+05:30"
   },
   "CUMMINSIND.NS_15m": {
-    "last_timestamp": "2026-08-18 10:15:00+05:30"
+    "last_timestamp": "2026-08-18 10:30:00+05:30"
   }
 }
